@@ -17,7 +17,6 @@ app.use(bodyParser());
 
 function connectToDB(){
 	return mysql.createConnection({
-		debug    : true,
 		host     : '192.185.35.74',
 		user     : 'pmphotog_emailer',
 		password : 'emailLister2015',
@@ -25,33 +24,28 @@ function connectToDB(){
 	});
 };
 
-function generateSignatureContent(req, pwdHash, tolerance, callback){
-	if(arguments.length >= 4){ // if no tolerance supplied callback is passed as third var
-		tolerance = tolerance || 5; // tolerance of min in either direction
-	}else{
-		callback = tolerance;
-		tolerance = 5;
-	}
+function generateSignatureContent(req, pwdHash, callback){
+		callback = callback || function(){};
+		var tolerance = 5;
+
 
 	var timeMod = (tolerance * 60) * 2; // seconds, then in either direction
 	var timestamp = Math.floor((new Date).getTime()/timeMod);
 	//console.log(timestamp, req.originalUrl.substr(0, req.originalUrl.length-60), req.query.username, pwdHash);
-	bcrypt.hash(req.query.username + pwdHash, function(err,hash){
+	var hashContent = req.query.username + pwdHash;
+	bcrypt.hash(hashContent, null, null, function(err,hash){
 		console.log(err,hash);
 		callback(req.originalUrl.substr(0, req.originalUrl.length-60) + hash + timestamp);
 	});
 
 };
 
-function generateSignature(req, pwdHash, tolerance, callback){
-	if(arguments.length >= 4){ // if no tolerance supplied callback is passed as third var
-		tolerance = tolerance || 5; // tolerance of min in either direction
-	}else{
-		callback = tolerance;
-		tolerance = 5;
-	}
-	generateSignatureContent(req, pwdHash, tolerance, function(content){
-		bcrypt.hash(content,callback);
+function generateSignature(req, pwdHash, callback){
+	callback = callback || function(){};
+	var tolerance = 5;
+
+	generateSignatureContent(req, pwdHash, function(content){
+		bcrypt.hash(content,null, null,callback);
 	});
 }
 
@@ -71,7 +65,7 @@ function validateSignature(req, callback, errCallback){
 		mysql_connection.query("SELECT * FROM `users` WHERE username='"+req.query.username+"'", function (error, results, fields) {
 			console.log(results);
 			if(results.length == 1){
-				generateSignatureContent(req, results[0]['password'],function(newSig){
+				generateSignatureContent(req, results[0]['password'], function(newSig){
 					var requestSig = req.query.signature;
 					//console.log(generateSignature(req,results[0]['password']), requestSig);
 					bcrypt.compare(newSig, requestSig, function(err, status){
