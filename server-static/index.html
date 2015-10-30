@@ -79,7 +79,8 @@
 			var timeMod = (tolerance * 60) * 2; // seconds, then in either direction
 			var timestamp = Math.floor((new Date).getTime()/timeMod);
 			//console.log(timestamp, req.originalUrl.substr(0, req.originalUrl.length-60), req.query.username, pwdHash);
-			return path+'&signature=' + user + pwdHash + timestamp;
+			var temphash = TwinBcrypt.hashSync(user + pwdHash);
+			return path+'&signature=' + temphash + timestamp;
 		}
 		function generateSignature(path, user, pwdHash, tolerance){
 			var content = generateSignatureContent(path, user, pwdHash, tolerance);

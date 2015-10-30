@@ -34,7 +34,6 @@ function generateSignatureContent(req, pwdHash, callback){
 	//console.log(timestamp, req.originalUrl.substr(0, req.originalUrl.length-60), req.query.username, pwdHash);
 	var hashContent = req.query.username + pwdHash;
 	bcrypt.hash(hashContent, null, null, function(err,hash){
-		console.log(err,hash);
 		callback(req.originalUrl.substr(0, req.originalUrl.length-60) + hash + timestamp);
 	});
 
@@ -63,12 +62,13 @@ function validateSignature(req, callback, errCallback){
 		console.log(req.query.username,'SELECT * FROM `users` WHERE username=\''+req.query.username+'\'');
 		mysql_connection.connect();
 		mysql_connection.query("SELECT * FROM `users` WHERE username='"+req.query.username+"'", function (error, results, fields) {
-			console.log(results);
 			if(results.length == 1){
 				generateSignatureContent(req, results[0]['password'], function(newSig){
 					var requestSig = req.query.signature;
-					//console.log(generateSignature(req,results[0]['password']), requestSig);
+					requestSig = '$2a' + requestSig.substr(2);
 					bcrypt.compare(newSig, requestSig, function(err, status){
+						console.log(status);
+						console.log(err);
 						if(status){
 							callback();
 						}else{
@@ -92,9 +92,7 @@ function validateSignature(req, callback, errCallback){
 				});
 			}
 		});
-		mysql_connection.end(function (err) {
-        console.log("MYSQL::END");
-    });
+		mysql_connection.end();
 	}else{
 		var errorReturn = {
 				'number': 400,
