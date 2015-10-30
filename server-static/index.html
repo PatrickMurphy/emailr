@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <meta charset="utf-8">
+  <title>Emailr</title>
+  <meta name="description" content="The most simple email list marketing client!">
+  <meta name="author" content="Patrick Murphy">
+
+  <!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+	<script src="https://code.jquery.com/jquery-2.1.4.js"></script>
+	<script src="https://raw.githubusercontent.com/fpirsch/twin-bcrypt/master/twin-bcrypt.min.js" async></script>
+  <!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link rel="stylesheet" href="css/normalize.css">
+  <link rel="stylesheet" href="css/skeleton.css">
+	<style>
+		.emailList {
+			display: none;
+		}
+		label{text-align: right;}
+	</style>
+
+	<script type="text/javascript">
+		var isSignedIn = false;
+		var username = null;
+		var passwordHash = null;
+		//login
+		$(window).load(function(){
+		$('#loginForm').submit(function(e){
+			e.preventDefault();
+			//try auth url for success
+			var pass= TwinBcrypt.hashSync($('#loginForm input[type=password]').val());
+				apiRequest('/auth', $('#loginForm input[type=text]').val(), pass, function(data){
+					if(data.success){
+						// if success
+						isSignedIn = true;
+						username = $('#loginForm input[type=text]').val();
+						passwordHash = pass;
+						$('.loginForm').hide();
+						$('.emailList').show();
+					}else{
+						alert('error');
+					}
+				});
+
+		});
+
+		function apiRequest(path,user,password,callback){
+			// new request:
+			user = user || username;
+			if(password){
+				password = TwinBcrypt.hashSync(password);
+			}else{
+				password = passwordHash;
+			}
+			if(user !== null && password !== null){
+				var sig = generateSignature(path,user,password);
+				var url = path
+				if(path.indexOf('?') > -1){
+					url += '&username='+user+'&signature='+sig;
+				}else{
+					url += '?username='+user+'&signature='+sig;
+				}
+				$.getJSON(url, callback);
+			}
+		}
+
+		function generateSignatureContent(path, user, pwdHash, tolerance){
+			tolerance = tolerance || 5; // tolerance of min in either direction
+			var timeMod = (tolerance * 60) * 2; // seconds, then in either direction
+			var timestamp = Math.floor((new Date).getTime()/timeMod);
+			//console.log(timestamp, req.originalUrl.substr(0, req.originalUrl.length-60), req.query.username, pwdHash);
+			return path+'&signature=' + user + pwdHash + timestamp;
+		}
+		function generateSignature(path, user, pwdHash, tolerance){
+			var content = generateSignatureContent(path, user, pwdHash, tolerance);
+			return TwinBcrypt.hashSync(content);
+		}
+		});
+	</script>
+
+  <!-- Favicon
+  ––––––––––––––––––––––––––––––––––––––––––––––––––
+  <link rel="icon" type="image/png" href="images/favicon.png">-->
+
+</head>
+<body>
+
+  <!-- Primary Page Layout
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <div class="container">
+    <div class="row loginForm">
+      <div class="one-half column" style="margin-top: 25%">
+        <h3 style="color:#1d77af;background:rgba(93, 93, 93, 0.13);margin:0px;border-top-left-radius:10px;border-top-right-radius:10px;padding-left:2%;">Email<span style="color:#e37a00;">r</span></h3>
+				<form id="loginForm" style="background:rgba(224, 224, 224, 0.26);padding-top:15px">
+					<div class="row">
+						<label class="five columns">Username:</label><input class="seven columns" type="text" name="username" />
+					</div>
+					<div class="row">
+						<label class="five columns">Password:</label><input class="seven columns" type="password" name="password" />
+					</div>
+					<div class="row">
+						<input type="submit" class="seven columns offset-by-five button-primary" value="Login" name="submit" />
+					</div>
+				</form>
+      </div>
+    </div>
+		<div class="emailList">
+			<table class="emailTable"></table>
+		</div>
+  </div>
+
+<!-- End Document
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+</body>
+</html>
